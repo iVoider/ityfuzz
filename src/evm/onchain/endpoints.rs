@@ -113,7 +113,7 @@ pub struct BasicInfo {
 
 #[derive(Deserialize)]
 pub struct GetPairResponse {
-    pub data: GetPairResponseData,
+    pub data: Option<GetPairResponseData>,
 }
 
 #[derive(Deserialize)]
@@ -732,25 +732,28 @@ impl OnChainConfig {
 
                 let r = self.post(url.to_string(), body).unwrap();
                 let res: GetPairResponse = serde_json::from_str(&r).unwrap();
+                
 
-                for pair in res.data.p0.iter().chain(res.data.p1.iter()) {
-                    next_tokens.push(PairData {
-                        src: "v2".to_string(),
-                        in_: if pair.token0.id == *token { 0 } else { 1 },
-                        pair: pair.id.to_string(),
-                        next: if pair.token0.id != *token {
-                            pair.token0.id.clone()
-                        } else {
-                            pair.token1.id.clone()
-                        },
-                        decimals0: pair.token0.decimals.parse().unwrap(),
-                        decimals1: pair.token1.decimals.parse().unwrap(),
-                        src_exact: name.to_string(),
-                        rate: 0,
-                        token: token.to_string(),
-                        initial_reserves_0: "".to_string(),
-                        initial_reserves_1: "".to_string(),
-                    });
+                if let Some(data) = res.data {
+                    for pair in data.p0.iter().chain(data.p1.iter()) {
+                        next_tokens.push(PairData {
+                            src: "v2".to_string(),
+                            in_: if pair.token0.id == *token { 0 } else { 1 },
+                            pair: pair.id.to_string(),
+                            next: if pair.token0.id != *token {
+                                pair.token0.id.clone()
+                            } else {
+                                pair.token1.id.clone()
+                            },
+                            decimals0: pair.token0.decimals.parse().unwrap(),
+                            decimals1: pair.token1.decimals.parse().unwrap(),
+                            src_exact: name.to_string(),
+                            rate: 0,
+                            token: token.to_string(),
+                            initial_reserves_0: "".to_string(),
+                            initial_reserves_1: "".to_string(),
+                        });
+                    }
                 }
             }
         }
@@ -778,8 +781,9 @@ impl OnChainConfig {
 
                 let r = self.post(i.to_string(), body).unwrap();
                 let res: GetPairResponse = serde_json::from_str(&r).unwrap();
-
-                for pair in res.data.p0.iter().chain(res.data.p1.iter()) {
+                
+                if let Some(data) = res.data {
+                 for pair in data.p0.iter().chain(data.p1.iter()) {
                     next_tokens.push(PairData {
                         in_: if pair.token0.id == *token { 0 } else { 1 },
                         pair: pair.id.clone(),
@@ -799,6 +803,7 @@ impl OnChainConfig {
                     });
                 }
             }
+        }
         }
 
         next_tokens

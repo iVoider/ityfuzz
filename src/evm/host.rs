@@ -1,4 +1,5 @@
 use crate::evm::bytecode_analyzer;
+use crate::evm::corpus_initializer::DEFAULT_CALLERS;
 use crate::evm::input::{ConciseEVMInput, EVMInput, EVMInputT, EVMInputTy};
 use crate::evm::middlewares::middleware::{CallMiddlewareReturn, Middleware, MiddlewareType};
 use crate::evm::mutator::AccessPattern;
@@ -847,9 +848,14 @@ where
 
         // if calling sender, then definitely control leak
         if self.origin == input.contract {
-            record_func_hash!();
+            let instr_result = if !DEFAULT_CALLERS.contains(&input.context.caller) {
+                record_func_hash!();
+                ControlLeak
+            } else {
+                InstructionResult::Revert
+            };
             // println!("call self {:?} -> {:?} with {:?}", input.context.caller, input.contract, hex::encode(input.input.clone()));
-            return (ControlLeak, Gas::new(0), Bytes::new());
+            return (instr_result, Gas::new(0), Bytes::new());
         }
 
         let mut input_seq = input.input.to_vec();

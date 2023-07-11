@@ -18,6 +18,7 @@ use libafl::corpus::{Corpus, Testcase};
 
 use libafl::schedulers::Scheduler;
 use libafl::state::HasCorpus;
+use once_cell::sync::Lazy;
 use revm_primitives::Bytecode;
 
 use std::cell::RefCell;
@@ -88,6 +89,22 @@ macro_rules! add_input_to_corpus {
             .expect("failed to call scheduler on_add");
     };
 }
+
+pub static DEFAULT_CALLERS: Lazy<HashSet<EVMAddress>> = Lazy::new(|| {
+    return HashSet::from([
+        fixed_address("8EF508Aca04B32Ff3ba5003177cb18BfA6Cd79dd"),
+        fixed_address("35c9dfd76bf02107ff4f7128Bd69716612d31dDb"),
+        // fixed_address("5E6B78f0748ACd4Fb4868dF6eCcfE41398aE09cb"),
+    ]);
+});
+
+pub static CONTRACT_CALLERS: Lazy<HashSet<EVMAddress>> = Lazy::new(|| {
+    return HashSet::from([
+        fixed_address("e1A425f1AC34A8a441566f93c82dD730639c8510"),
+        fixed_address("68Dd4F5AC792eAaa5e36f4f4e0474E0625dc9024"),
+        // fixed_address("aF97EE5eef1B02E12B650B8127D8E8a6cD722bD2"),
+    ]);
+});
 
 impl<'a> EVMCorpusInitializer<'a> {
     pub fn new(
@@ -210,27 +227,16 @@ impl<'a> EVMCorpusInitializer<'a> {
     }
 
     pub fn setup_default_callers(&mut self) {
-        let default_callers = HashSet::from([
-            fixed_address("8EF508Aca04B32Ff3ba5003177cb18BfA6Cd79dd"),
-            fixed_address("35c9dfd76bf02107ff4f7128Bd69716612d31dDb"),
-            // fixed_address("5E6B78f0748ACd4Fb4868dF6eCcfE41398aE09cb"),
-        ]);
-
-        for caller in default_callers {
-            self.state.add_caller(&caller);
+        for caller in CONTRACT_CALLERS.iter() {
+            self.state.add_caller(caller);
         }
     }
 
     pub fn setup_contract_callers(&mut self) {
-        let contract_callers = HashSet::from([
-            fixed_address("e1A425f1AC34A8a441566f93c82dD730639c8510"),
-            fixed_address("68Dd4F5AC792eAaa5e36f4f4e0474E0625dc9024"),
-            // fixed_address("aF97EE5eef1B02E12B650B8127D8E8a6cD722bD2"),
-        ]);
-        for caller in contract_callers {
-            self.state.add_caller(&caller);
+        for caller in CONTRACT_CALLERS.iter() {
+            self.state.add_caller(caller);
             self.executor.host.set_code(
-                caller,
+                *caller,
                 Bytecode::new_raw(Bytes::from(vec![0xfd, 0x00])),
                 self.state,
             );
